@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Fantasy League Planner</title>
+    <!-- Logo SVG w faviconie -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23172554'/><circle cx='50' cy='42' r='22' stroke='%233b82f6' stroke-width='4' fill='none'/><path d='M 50 20 L 50 64 M 28 42 L 72 42' stroke='%233b82f6' stroke-width='3'/><text x='50' y='88' font-size='15' font-weight='bold' font-family='sans-serif' fill='white' text-anchor='middle'>FANTASY</text></svg>">
+    
+    <style>
+        :root {
+            /* Tryb ciemny (domyślny) */
+            --bg-main: #0b0f17;
+            --bg-card: #151c28;
+            --bg-sub: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+            
+            --brand-primary: #1d4ed8;
+            --brand-accent: #f59e0b;
+            
+            --bc-header: #2563eb;
+            --fc-header: #059669;
+            
+            --cell-height: 58px;
+            --gd-col-width: 80px;
+        }
+
+        [data-theme="light"] {
+            --bg-main: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-sub: #e2e8f0;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-color: #cbd5e1;
+            
+            --bc-header: #1d4ed8;
+            --fc-header: #047857;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: background-color 0.2s, color 0.2s;
+            padding: 20px;
+        }
+
+        /* Nagłówek */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-area svg {
+            width: 42px;
+            height: 42px;
+        }
+
+        .logo-area h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .btn {
+            background-color: var(--brand-accent);
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Pasek wyboru kolejki */
+        .gw-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: var(--bg-card);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Sekcja wyszukiwarki */
+        .search-section {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+
+        .search-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .search-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        input, select {
+            background-color: var(--bg-sub);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--bc-header);
+        }
+
+        .search-results {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+
+        .player-chip {
+            background: var(--bg-sub);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            cursor: pointer;
+            font-size: 0.88rem;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .player-chip:hover {
+            border-color: var(--brand-accent);
+            background-color: var(--bg-card);
+        }
+
+        .pos-tag {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 700;
+        }
+
+        .pos-tag.BC { background-color: var(--bc-header); }
+        .pos-tag.FC { background-color: var(--fc-header); }
+
+        /* Tabela Składu */
+        .roster-container {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-x: auto;
+        }
+
+        .formation-block {
+            background-color: var(--bg-card);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .formation-header {
+            padding: 12px 20px;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .formation-header.bc { background-color: var(--bc-header); }
+        .formation-header.fc { background-color: var(--fc-header); }
+
+        .sheet-grid {
+            display: grid;
+            grid-template-columns: 240px repeat(7, var(--gd-col-width));
+            width: max-content;
+        }
+
+        .sheet-cell {
+            height: var(--cell-height);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            font-size: 0.85rem;
+        }
+
+        .sheet-header-cell {
+            background-color: var(--bg-sub);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            color: var(--text-sub);
+        }
+
+        .player-label-cell {
+            justify-content: flex-start;
+            padding-left: 14px;
+            font-weight: 600;
+            background-color: var(--bg-card);
+        }
+
+        .slot-card {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-sub);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .slot-card.empty {
+            border: 1px dashed var(--border-color);
+            background: transparent;
+            color: var(--text-sub);
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            cursor: pointer;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 2px;
+        }
+
+        .remove-btn:hover {
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <header>
+        <div class="logo-area">
+            <svg viewBox="0 0 100 100">
+                <rect width="100" height="100" rx="20" fill="#1e293b"/>
+                <circle cx="50" cy="42" r="22" stroke="#3b82f6" stroke-width="4" fill="none"/>
+                <path d="M 50 20 L 50 64 M 28 42 L 72 42" stroke="#3b82f6" stroke-width="3"/>
+                <text x="50" y="88" font-size="14" font-weight="bold" font-family="sans-serif" fill="white" text-anchor="middle">FANTASY</text>
+            </svg>
+            <h1>NBA Fantasy Planner</h1>
+        </div>
+        <div class="controls">
+            <button class="btn" id="theme-toggle" onclick="toggleTheme()">☀️ Tryb Jasny</button>
+        </div>
+    </header>
+
+    <!-- Nawigacja Gameweek -->
+    <div class="gw-selector">
+        <label><strong>Gameweek:</strong></label>
+        <button class="btn" onclick="changeGW(-1)">◄</button>
+        <span id="current-gw" style="font-weight: bold; font-size: 1.1rem; min-width: 60px; text-align: center;">GW 1</span>
+        <button class="btn" onclick="changeGW(1)">►</button>
+        <span style="margin-left: auto; color: var(--text-sub); font-size: 0.85rem;">
+            Zawodnicy przechodzą automatycznie na kolejne kolejnki (GW)
+        </span>
+    </div>
+
+    <!-- Wyszukiwarka zawodników -->
+    <section class="search-section">
+        <h3 style="margin-bottom: 12px; font-size: 1.1rem;">Dodaj Zawodników do Składu</h3>
+        <div class="search-controls">
+            <input type="text" id="search-input" placeholder="Szukaj gracza lub drużyny..." oninput="filterPlayers()">
+            <select id="filter-formation" onchange="filterPlayers()">
+                <option value="ALL">Wszystkie Pozycje</option>
+                <option value="BC">Obwód (BC)</option>
+                <option value="FC">Skrzydło / Center (FC)</option>
+            </select>
+            <select id="filter-price" onchange="filterPlayers()">
+                <option value="ALL">Wszystkie Ceny</option>
+                <option value="14">Maksymalnie $14M</option>
+                <option value="15">Maksymalnie $15M</option>
+            </select>
+            <select id="sort-by" onchange="filterPlayers()">
+                <option value="name">Sortuj: Nazwisko</option>
+                <option value="price-desc">Cena: Najwyższa</option>
+                <option value="price-asc">Cena: Najniższa</option>
+            </select>
+        </div>
+        <div class="search-results" id="search-results"></div>
+    </section>
+
+    <!-- Tabele Formacji -->
+    <div class="roster-container">
+
+        <!-- Backcourt (BC) -->
+        <div class="formation-block">
+            <div class="formation-header bc">
+                <span>FORMACJA: BACKCOURT (BC)</span>
+                <span style="font-size: 0.85rem; font-weight: normal;">Obrońcy i Rozgrywający</span>
+            </div>
+            <div class="sheet-grid" id="grid-bc"></div>
+        </div>
+
+        <!-- Frontcourt (FC) -->
+        <div class="formation-block">
+            <div class="formation-header fc">
+                <span>FORMACJA: FRONTCOURT (FC)</span>
+                <span style="font-size: 0.85rem; font-weight: normal;">Skrzydłowi i Środkowi</span>
+            </div>
+            <div class="sheet-grid" id="grid-fc"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const ALL_PLAYERS = [
+            { id: 1, name: "Luka Dončić", team: "DAL", pos: "BC", price: 15.5, opponent: "@BOS" },
+            { id: 2, name: "Stephen Curry", team: "GSW", pos: "BC", price: 14.0, opponent: "vs LAL" },
+            { id: 3, name: "Shai Gilgeous-Alexander", team: "OKC", pos: "BC", price: 14.8, opponent: "@PHX" },
+            { id: 4, name: "Ja Morant", team: "MEM", pos: "BC", price: 12.5, opponent: "vs HOU" },
+            { id: 5, name: "Nikola Jokić", team: "DEN", pos: "FC", price: 16.0, opponent: "@MIN" },
+            { id: 6, name: "Giannis Antetokounmpo", team: "MIL", pos: "FC", price: 15.2, opponent: "vs MIA" },
+            { id: 7, name: "Jayson Tatum", team: "BOS", pos: "FC", price: 13.8, opponent: "@NYK" },
+            { id: 8, name: "Victor Wembanyama", team: "SAS", pos: "FC", price: 13.0, opponent: "vs LAC" }
+        ];
+
+        let currentGW = 1;
+        let rosterData = {};
+
+        function initGWData(gw) {
+            if (!rosterData[gw]) {
+                if (gw > 1 && rosterData[gw - 1]) {
+                    rosterData[gw] = JSON.parse(JSON.stringify(rosterData[gw - 1]));
+                } else {
+                    rosterData[gw] = {
+                        BC: [null, null, null],
+                        FC: [null, null, null]
+                    };
+                }
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('theme-toggle');
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.setAttribute('data-theme', 'light');
+                btn.innerText = '🌙 Tryb Ciemny';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                btn.innerText = '☀️ Tryb Jasny';
+            }
+        }
+
+        function changeGW(delta) {
+            if (currentGW + delta < 1) return;
+            currentGW += delta;
+            document.getElementById('current-gw').innerText = `GW ${currentGW}`;
+            initGWData(currentGW);
+            renderGrids();
+        }
+
+        function filterPlayers() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const formation = document.getElementById('filter-formation').value;
+            const maxPrice = document.getElementById('filter-price').value;
+            const sortBy = document.getElementById('sort-by').value;
+
+            let result = ALL_PLAYERS.filter(p => {
+                const matchesQuery = p.name.toLowerCase().includes(query) || p.team.toLowerCase().includes(query);
+                const matchesPos = formation === 'ALL' || p.pos === formation;
+                const matchesPrice = maxPrice === 'ALL' || p.price <= parseFloat(maxPrice);
+                return matchesQuery && matchesPos && matchesPrice;
+            });
+
+            if (sortBy === 'name') result.sort((a,b) => a.name.localeCompare(b.name));
+            if (sortBy === 'price-desc') result.sort((a,b) => b.price - a.price);
+            if (sortBy === 'price-asc') result.sort((a,b) => a.price - b.price);
+
+            renderSearchResults(result);
+        }
+
+        function renderSearchResults(players) {
+            const container = document.getElementById('search-results');
+            container.innerHTML = '';
+            players.forEach(player => {
+                const chip = document.createElement('div');
+                chip.className = 'player-chip';
+                chip.innerHTML = `
+                    <span class="pos-tag ${player.pos}">${player.pos}</span>
+                    <strong>${player.name}</strong> (${player.team}) - $${player.price}M
+                `;
+                chip.onclick = () => addPlayerToRoster(player);
+                container.appendChild(chip);
+            });
+        }
+
+        function addPlayerToRoster(player) {
+            const currentRoster = rosterData[currentGW][player.pos];
+            const emptyIndex = currentRoster.findIndex(slot => slot === null);
+
+            if (emptyIndex === -1) {
+                alert(`Brak wolnych miejsc w formacji ${player.pos}!`);
+                return;
+            }
+
+            const exists = [...rosterData[currentGW].BC, ...rosterData[currentGW].FC]
+                .some(p => p && p.id === player.id);
+            if (exists) {
+                alert("Ten zawodnik znajduje się już w Twoim składzie!");
+                return;
+            }
+
+            currentRoster[emptyIndex] = player;
+            renderGrids();
+        }
+
+        function removePlayer(pos, index) {
+            rosterData[currentGW][pos][index] = null;
+            renderGrids();
+        }
+
+        function renderFormGrid(posKey, elementId) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+
+            const cornerHeader = document.createElement('div');
+            cornerHeader.className = 'sheet-cell sheet-header-cell';
+            cornerHeader.innerText = `Zawodnik (${posKey})`;
+            container.appendChild(cornerHeader);
+
+            for (let i = 1; i <= 7; i++) {
+                const gdHeader = document.createElement('div');
+                gdHeader.className = 'sheet-cell sheet-header-cell';
+                gdHeader.innerText = `GD ${i}`;
+                container.appendChild(gdHeader);
+            }
+
+            const slots = rosterData[currentGW][posKey];
+            slots.forEach((player, index) => {
+                const labelCell = document.createElement('div');
+                labelCell.className = 'sheet-cell player-label-cell';
+                if (player) {
+                    labelCell.innerHTML = `
+                        <div>
+                            <div>${player.name}</div>
+                            <small style="color:var(--text-sub); font-size: 0.75rem">${player.team} | $${player.price}M</small>
+                        </div>
+                    `;
+                } else {
+                    labelCell.innerHTML = `<span style="color:var(--text-sub)">+ Wolny Slot (${posKey})</span>`;
+                }
+                container.appendChild(labelCell);
+
+                for (let gd = 1; gd <= 7; gd++) {
+                    const slotCell = document.createElement('div');
+                    slotCell.className = 'sheet-cell';
+                    
+                    if (player) {
+                        slotCell.innerHTML = `
+                            <div class="slot-card">
+                                <span class="remove-btn" onclick="removePlayer('${posKey}', ${index})">✕</span>
+                                <div>Mecz</div>
+                                <strong style="color:var(--brand-accent)">${player.opponent}</strong>
+                            </div>
+                        `;
+                    } else {
+                        slotCell.innerHTML = `<div class="slot-card empty">-</div>`;
+                    }
+                    container.appendChild(slotCell);
+                }
+            });
+        }
+
+        function renderGrids() {
+            renderFormGrid('BC', 'grid-bc');
+            renderFormGrid('FC', 'grid-fc');
+        }
+
+        initGWData(1);
+        filterPlayers();
+        renderGrids();
+    </script>
+</body>
+</html>
